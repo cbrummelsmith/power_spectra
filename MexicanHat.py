@@ -190,7 +190,7 @@ class MexicanHat:
         # convert power spectra and wavenumber from pixel units to physical units
         if phys_width is not None:
             len_per_pix = phys_width / nside
-            power *= len_per_pix**6
+            power *= len_per_pix**n
             k /= len_per_pix
 
         print('Finished power spectrum.')
