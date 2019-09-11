@@ -41,6 +41,8 @@ class MexicanHat:
             input data to be filtered
         sig : float
             standard deviation of the gaussian kernal in units of pixels 
+        mask : np.ndarray (optional)
+            A mask the same shape as data used to remove regions of data            
         
         Returns
         -------        
