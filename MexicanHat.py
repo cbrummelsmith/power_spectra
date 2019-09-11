@@ -187,10 +187,9 @@ class MexicanHat:
         # normalize
         power *= norm
 
-        # convert power spectra and wavenumber from pixel units to physical units
+        # convert wavenumber from units of 1/pixels to physical units
         if phys_width is not None:
             len_per_pix = phys_width / nside
-            power *= len_per_pix**n
             k /= len_per_pix
 
         print('Finished power spectrum.')
@@ -201,8 +200,13 @@ class MexicanHat:
 
         # -- End power_spectrum --
 
-    def power_spectrum_amplitude(self, power, k):
-        return np.sqrt(4*np.pi * k**3 * power)
+    def power_spectrum_amplitude(self, power, k, n):
+        if n == 3:
+            return np.sqrt(4*np.pi * (k/k.max()/2.)**3 * power)
+        if n == 2:            
+            return np.sqrt(2*np.pi * (k/k.max()/2.)**2 * power)
+        if n == 1:
+            return np.sqrt((k/k.max()/2.) * power)            
 
     def coherence(self, Pa, Pb, Pab):
         return Pab / np.sqrt(Pa * Pb)
