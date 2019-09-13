@@ -176,7 +176,7 @@ class MexicanHat:
             print "cross"
             S_all_k_b, k = self.filter_data_k(data_b, mask)
         else:
-            S_all_k_b, k = S_all_k_a, k
+            S_all_k_b = S_all_k_a
 
         # scale dependent normalization, accounting for masked cells
         Nrat = size/mask.sum() if mask is not None else 1.
