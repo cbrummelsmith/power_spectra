@@ -48,6 +48,7 @@ class MexicanHat:
         -------        
         The filtered image : np.ndarray (same shape as data)
         """
+        print self.mode
         sig1 = sig / np.sqrt(1 + self.eps)
         sig2 = sig * np.sqrt(1 + self.eps)
 
