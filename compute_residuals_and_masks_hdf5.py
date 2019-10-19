@@ -1,8 +1,19 @@
+machine = 'macbook-pro'
+machine = 'Takeo'
+
+import sys
+if machine == 'macbook-pro':
+    kav = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program'
+elif machine == 'Takeo':
+    kav = '/Users/Takeo/Kavli_Summer_Program'
+else:
+    print('machine must be "macbook-pro" or "Takeo"')
+sys.path.append(kav+'/code/python_modules')
+
 import yt
 import h5py
 import numpy as np
 import sys
-sys.path.append('/Users/Takeo/Kavli_Summer_Program/code/python_modules')
 import RadialProfile
 
 
@@ -25,14 +36,14 @@ def padded_data_mask(data, npad):
 padded = False
 npad = 3
 
-gridLevel=9
-#snapshots = [114]
-snapshots = [150, 137, 114, 103, 82, 59, 147, 46]
+gridLevel=5
+snapshots = [114]
+#snapshots = [150, 137, 114, 103, 82, 59, 147, 46]
 kpc_per_arcmin=21.21
 width_arcmin=7. 
 
-#datadir = '/Users/Takeo/Kavli_Summer_Program/results_data/pad_testing'
-datadir = '/Users/Takeo/Kavli_Summer_Program/results_data/all_samples'
+datadir = kav + '/results_data/testing2'
+#datadir = kav + '/results_data/all_samples'
 dsfn = '/Volumes/Mac-500GB/simulations/AGN_FB/DD%04d/stest_%04d'
 
 if padded:

@@ -5,9 +5,9 @@ import sys
 if machine == 'macbook-pro':
     kav = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program'
 elif machine == 'Takeo':
-    kav = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program'
+    kav = '/Users/Takeo/Kavli_Summer_Program'
 else:
-    print 'machine must be "macbook-pro" or "Takeo"'
+    print('machine must be "macbook-pro" or "Takeo"')
 sys.path.append(kav+'/code/python_modules')
 
 import h5py
@@ -117,31 +117,37 @@ def C_and_R_stats(spectra_data, snapshots, ranges, cross_pairs):
             
 #----------------------------------------------------------------------
 
-def coherence_and_ratio_nP(aQ, aP):
-    gQ, gP, gT = 5./3., 0, 1 # adiabatic indicies
+def coherence_and_ratio_nP(aQ, aP, cross_fields):
+    gQ, gP, gT = 5./3., 0., 1. # adiabatic indicies
     aQsq = aQ * aQ
     aPsq = aP * aP
     aTsq = 1 - aQsq - aPsq
     
     alphaSq = [aQsq, aPsq, aTsq]
-    gamma   = [gQ, gP, gT]
+    gamma   = np.array([gQ, gP, gT])
+    w = {'n': [1.,1.,1.], 'P': gamma, 'T': gamma - 1}
+
     
     top = np.zeros_like(aQ)
-    bot = np.zeros_like(aQ)
+    bot0 = np.zeros_like(aQ)
+    bot1 = np.zeros_like(aQ)
+
+
     for i in range(len(alphaSq)):
-        top += alphaSq[i] * (gamma[i])
-        bot += alphaSq[i] * (gamma[i])**2
-    
-    mask = np.logical_not(np.sqrt(aTsq) <= 1)
-    R = top
-    C = top/np.sqrt(bot)
-    
+        top  += alphaSq[i] * w[cross_fields[0]][i] * w[cross_fields[1]][i] 
+        bot0 += alphaSq[i] * w[cross_fields[0]][i]**2
+        bot1 += alphaSq[i] * w[cross_fields[1]][i]**2
+
+    R = top / bot0
+    C = top / (np.sqrt(bot0) * np.sqrt(bot1))
+
+    mask = np.logical_not(np.sqrt(aTsq) <= 1)    
     R[mask] = np.nan
     C[mask] = np.nan    
     
     return C, R
 
-def make_analytic_C_R_maps(res):
+def make_analytic_C_R_maps(res, cross_pairs):
 
     map_data = {'C': {}, 'R': {}}
 
@@ -149,8 +155,6 @@ def make_analytic_C_R_maps(res):
     res = 800
     x = y = np.linspace(0, 1, 800)
     aQ, aP = np.meshgrid(x, y)
-
-    Cmap_nP, Rmap_nP = coherence_and_ratio_nP(aQ, aP)
 
     # isothermal quarter circle line
     xnew = x[x < 1/np.sqrt(2)]
@@ -166,9 +170,14 @@ def make_analytic_C_R_maps(res):
     
     # dividing line between isobaric and adiabatic
     xQP = np.linspace(xT.max()/np.sqrt(2), res/np.sqrt(2), 2)
+    
+    for pair in cross_pairs:
+        Cmap, Rmap = coherence_and_ratio_nP(aQ, aP, pair)
+        map_data['C'][pair] = {}
+        map_data['R'][pair] = {}
+        map_data['C'][pair]['map'] = Cmap
+        map_data['R'][pair]['map'] = Rmap
 
-    map_data['C']['map'] = Cmap_nP
-    map_data['R']['map'] = Rmap_nP
     map_data['isothermal_line'] = (xT,  yT)
     map_data['isob_adiab_line'] = (xQP, xQP)
     map_data['max_line']        = (xMax, yMax)   
@@ -208,15 +217,14 @@ def add_CR_bands_to_CR_map(map_data, snapshots, stats, scales, cross_pairs):
      each length scale. This delta is used to plot very thin bands representing mean values.
     '''
     for letter in ['C', 'R']:
-        vmap = map_data[letter]['map']
-        vmap[np.isnan(vmap)] = np.inf
-        res = vmap.shape[0]
-        for snap in snapshots:
-            map_data[letter][snap] = {}  
-            for pair in cross_pairs:
-                map_data[letter][snap][pair] = {}               
+        for pair in cross_pairs:               
+            vmap = map_data[letter][pair]['map']
+            vmap[np.isnan(vmap)] = np.inf
+            res = vmap.shape[0]            
+            for snap in snapshots:
+                map_data[letter][pair][snap] = {}  
                 for scale in scales:
-                    map_data[letter][snap][pair][scale] = {}               
+                    map_data[letter][pair][snap][scale] = {}               
                     avg = stats[snap][letter][pair][scale][2]  # mean value at given length scale
                     std = stats[snap][letter][pair][scale][3]
 
@@ -230,7 +238,7 @@ def add_CR_bands_to_CR_map(map_data, snapshots, stats, scales, cross_pairs):
                             if (j0+j < 0) or (i0+i < 0) or (j0+j >= res) or (i0+i >= res): continue
                             dv = np.abs(v - vmap[j0+j, i0+i])
                             if dv > delta: delta = dv
-                    map_data[letter][snap][pair][scale]['max_delta'] = 3*delta  # make band thicker than 1 cell
+                    map_data[letter][pair][snap][scale]['max_delta'] = 3*delta  # make band thicker than 1 cell
 
                     # masks for bands showing mean +/- 1 stdev, and mean +/- delta_analytic 
                     # for both Cp and Rp.
@@ -242,7 +250,7 @@ def add_CR_bands_to_CR_map(map_data, snapshots, stats, scales, cross_pairs):
                             vmin = avg-delta
                             vmax = avg+delta                 
                         mask = np.logical_and(vmap > vmin, vmap < vmax)
-                        map_data[letter][snap][pair][scale][band] = mask 
+                        map_data[letter][pair][snap][scale][band] = mask 
 
                     # end for band
                 # end for scale
@@ -257,39 +265,46 @@ def add_CR_bands_to_CR_map(map_data, snapshots, stats, scales, cross_pairs):
 projection = False
 padded = False
 
-#datadir = kav + '/results_data/pad_testing'
-#plotdir = kav + '/AGN_FB_plots/corey_MH_results/pad_testing'
-datadir = kav + '/results_data/all_samples'
-plotdir = kav + '/AGN_FB_plots/corey_MH_results/all_samples'
+datadir = kav + '/results_data/testing2'
+plotdir = kav + '/AGN_FB_plots/corey_MH_results/testing2'
+#datadir = kav + '/results_data/all_samples'
+#plotdir = kav + '/AGN_FB_plots/corey_MH_results/all_samples'
+print('datadir:', datadir) 
+print('plotdir:', plotdir) 
 
-#snapshots = [114]
-snapshots = [150, 137, 114, 103, 82, 59, 147]
+snapshots = [114]
+#snapshots = [150, 137, 114, 103, 82, 59, 147]
 
 cr_map_resolution = 800
 map_letters = ['R','C']
            
 field2letter = {'number_density':'n', 'pressure':'P', 'temperature':'T', 'mock_hard':'H', 'mock_soft':'S'}
-colors = {'nn':'b', 'TT':'r', 'PP':'g', 'nT':'m', 'nP':'c', 'HH':'tab:red', 'SS':'tab:blue', 'HS':'k'}
+colors = {'nn':'b', 'TT':'r', 'PP':'g', 'nT':'m', 'nP':'c', 'TP':'gold', 'HH':'tab:red', 'SS':'tab:blue', 'HS':'k'}
 
 field_pairs = [('number_density', 'number_density'), 
                ('pressure', 'pressure'), 
+               ('temperature', 'temperature'), 
+               ('number_density', 'pressure'),
+               ('number_density', 'temperature'),
+               ('temperature', 'pressure')]
+field_pairs_short = ['%s%s' % (field2letter[a],field2letter[b]) for (a,b) in field_pairs]
+print("\n\n",field_pairs_short)
+cross_pairs = ['nP', 'nT', 'TP']
+
+"""
+field_pairs = [('number_density', 'number_density'), 
+               ('pressure', 'pressure'), 
                ('number_density', 'pressure')]
-field_pairs_short = ['nn', 'PP', 'nP']
+field_pairs_short = ['%s%s' % (field2letter[a],field2letter[b]) for (a,b) in field_pairs]
 cross_pairs = ['nP']
-
-#field_pairs = [('mock_hard', 'mock_hard'),
-#               ('mock_soft', 'mock_soft'),
-#               ('mock_hard', 'mock_soft')]    
-#field_pairs_short = ['HH', 'SS', 'HS']
-#cross_pairs = ['HS']
-
+"""
 
 ranges = [(0,5), (5,15), (15,30), (30,50)] # length scales in kpc
 scales = ['%s-%s'%(a,b) for a,b in ranges]
 
 
 if not projection:
-    gridLevel=9
+    gridLevel=5
     ndims = 3
     dim_str = '3d_gridLevel_%02d' % gridLevel
 else:
@@ -330,9 +345,8 @@ spectra_data = compute_power_spectra(h5file, MH, mask_names, snapshots,
 h5file.close()
 spectra_data = compute_C_and_R(MH, snapshots, spectra_data, cross_pairs)
 stats = C_and_R_stats(spectra_data, snapshots, ranges, cross_pairs)
-cr_map_data = make_analytic_C_R_maps(cr_map_resolution)
+cr_map_data = make_analytic_C_R_maps(cr_map_resolution, cross_pairs)
 cr_map_data = add_CR_bands_to_CR_map(cr_map_data, snapshots, stats, scales, cross_pairs)
-
 
 
 # ------- PLOTTING --------  
@@ -347,7 +361,6 @@ white = np.array([255,255,255]*res**2).reshape(res,res,3)
 
 for snap in snapshots:
 
-
     # Power spectra amplitude figure
     fig1, axis = plt.subplots(1,1)
 
@@ -360,6 +373,7 @@ for snap in snapshots:
         a3d = spectra_data[snap][pair]['amplitude']
         axis.plot(k, a3d, marker='o', markersize=3, color=colors[pair], label=pair)#, linestyle='none')
 
+    axis.set_title('s%s'%(snap))
     axis.set_xscale('log')
     axis.set_yscale('log')    
     axis.set_ylim(1e-2,1)
@@ -369,20 +383,20 @@ for snap in snapshots:
     axis.set_ylabel(r"$A(k)$")
     axis.legend()
 
-
     for pair in cross_pairs:
         print("pair", pair)
         # C and R map overlap figure
         fig, axes = plt.subplots(2,2, figsize=(8,8))
         fig.subplots_adjust(hspace=0.05, wspace=0.05, right=0.88)    
-        fig.suptitle('s%s'%snap, x=0.5, y=0.92, fontsize=14)
+        fig.suptitle('s%s: %s'%(snap,pair), x=0.5, y=0.92, fontsize=14)
         axes = axes.flatten()
 
         k = spectra_data['k']
         coh = spectra_data[snap][pair]['C']
         rat = spectra_data[snap][pair]['R']
-        ax1.plot(k, coh, alpha=0.8, marker='.', label='s%s'%snap) 
-        ax2.plot(k, rat, alpha=0.8, marker='.', label='s%s'%snap)
+        ax1.set_title('s%s'%(snap))
+        ax1.plot(k, coh, alpha=0.8, marker='.', label='%s'%pair) 
+        ax2.plot(k, rat, alpha=0.8, marker='.', label='%s'%pair)
 
         # loop over 4 C and R overlap axes
         for ax in axes:
@@ -399,7 +413,8 @@ for snap in snapshots:
             ax.text(0.05*res, 0.20*res, 'isothermal', fontsize=10)
             
         for letter in map_letters:
-            data = cr_map_data[letter]['map']
+            #print('\n',letter)
+            data = cr_map_data[letter][pair]['map']
             cmap = cr_map_data[letter]['cmap']
             for i, (scale, (a,b)) in enumerate(zip(scales,ranges)):
                 stat = stats[snap][letter][pair][scale]
@@ -408,10 +423,10 @@ for snap in snapshots:
                 std = stat[3]
                 vmin = avg-std
                 vmax = avg+std  
-                print(snap, letter, avg)
+                #print(snap, letter, avg)
                 
                 # Create an alpha channel based measured C or R values
-                mask = cr_map_data[letter][snap][pair][scale]['err_mask']
+                mask = cr_map_data[letter][pair][snap][scale]['err_mask']
                 alphas = np.clip(mask, 0, .5)  # alpha set to 
                 
                 # Make uniform MxM pixel value array
@@ -463,12 +478,12 @@ for snap in snapshots:
         if mask_names is not None:
             for name in mask_names:
                 mask_str += '_' + name
-        fig1.savefig("%s/nearest_MH_%03d_%s_power_spectra_%s%s"% (plotdir, snap, pair, dim_str, mask_str))
         fig2.savefig("%s/nearest_MH_%03d_%s_CR_%s%s"           % (plotdir, snap, pair, dim_str, mask_str))
         fig.savefig( "%s/nearest_MH_%03d_%s_CR_map_%s%s"       % (plotdir, snap, pair, dim_str, mask_str))        
     
     ## END for pair in cross_pairs
 
+    fig1.savefig("%s/nearest_MH_%03d_power_spectra_%s%s"% (plotdir, snap, dim_str, mask_str))
 
     #plt.show()  
 
@@ -476,6 +491,8 @@ for snap in snapshots:
 
 spectra_fn = '%s/spectra_%s%s.h5' % (datadir, dim_str, mask_str)
 D2H5.save_dict_to_hdf5(spectra_data, spectra_fn)
-#f = open(spectrafn, 'w')
-#json.dump(spectra_data, f)
-#f.close()
+
+##*** Remove cr_map_data[letter]['cmap'] because hdf5 Cannot save <class 'matplotlib.colors.LinearSegmentedColormap'>  ***
+#cr_map_fn = '%s/cr_map_data_%s%s.h5' % (datadir, dim_str, mask_str)
+#D2H5.save_dict_to_hdf5(cr_map_data, cr_map_fn)
+
