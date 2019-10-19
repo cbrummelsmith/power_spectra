@@ -127,7 +127,7 @@ class MexicanHat:
             sys.stdout.flush()
             Sk = self.mexican_hat_convolve(data, sig, mask)
             filtered_data.append(Sk)
-        print ""
+        print("")
         return np.array(filtered_data), np.array(k)                                                                        
 
     # -- End filter_data_k --
@@ -173,7 +173,7 @@ class MexicanHat:
         S_all_k_a, k = self.filter_data_k(data_a, mask) 
         if data_b is not None:
             # filter data_b for cross spectrum
-            print "cross"
+            print("cross")
             S_all_k_b, k = self.filter_data_k(data_b, mask)
         else:
             S_all_k_b = S_all_k_a

@@ -2,7 +2,7 @@ import yt
 import h5py
 import numpy as np
 import sys
-sys.path.append('/Users/coreybrummel-smith/GT/Kavli_Summer_Program/code/python_modules')
+sys.path.append('/Users/Takeo/Kavli_Summer_Program/code/python_modules')
 import RadialProfile
 
 
@@ -26,14 +26,14 @@ padded = False
 npad = 3
 
 gridLevel=9
-#snapshots = [46]
+#snapshots = [114]
 snapshots = [150, 137, 114, 103, 82, 59, 147, 46]
 kpc_per_arcmin=21.21
 width_arcmin=7. 
 
-#datadir = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program/results_data/pad_testing'
-datadir = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program/results_data/all_samples'
-dsfn = '/Users/coreybrummel-smith/simulations/AGN_FB/DD%04d/stest_%04d'
+#datadir = '/Users/Takeo/Kavli_Summer_Program/results_data/pad_testing'
+datadir = '/Users/Takeo/Kavli_Summer_Program/results_data/all_samples'
+dsfn = '/Volumes/Mac-500GB/simulations/AGN_FB/DD%04d/stest_%04d'
 
 if padded:
     h5file = h5py.File('%s/padded_residuals_3d_gridLevel_%02d.h5' % (datadir, gridLevel), 'w')
@@ -45,7 +45,7 @@ h5file.attrs['kpc_per_arcmin'] = kpc_per_arcmin
 fields = ['number_density', 'pressure', 'temperature']
 
 for snap in snapshots:
-    print snap
+    print(snap)
     group = h5file.create_group('s%03d' % snap)   
     mask_group = group.create_group('masks')
 
@@ -86,7 +86,7 @@ for snap in snapshots:
     mask_group.create_dataset('sphere', data=sphere_mask)
 
     for field in fields:
-        print field
+        print(field)
         residual = RadialProfile.residual_field(covGrid[field] * temp_mask) # mask out cold gas before computing residual
 
         if padded:

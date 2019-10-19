@@ -1,5 +1,15 @@
+machine = 'macbook-pro'
+machine = 'Takeo'
+
 import sys
-sys.path.append('/Users/coreybrummel-smith/GT/Kavli_Summer_Program/code/python_modules')
+if machine == 'macbook-pro':
+    kav = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program'
+elif machine == 'Takeo':
+    kav = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program'
+else:
+    print 'machine must be "macbook-pro" or "Takeo"'
+sys.path.append(kav+'/code/python_modules')
+
 import h5py
 import numpy as np
 import yt
@@ -41,16 +51,16 @@ def compute_power_spectra(h5File, MexicanHat, mask_names, snapshots, akpc, width
 
         spectra_data[snap] = {}
         for fa, fb in field_pairs:
-            print 'fa, fb', fa, fb
+            print('fa, fb', fa, fb)
             pair = '%s%s' %(field2letter[fa], field2letter[fb])      
             spectra_data[snap][pair] = {}
             residual_a = h5File['s%03d' % snap]['residual_%s' % fa].value
 
             if fa == fb:
-                print 'fa=fb EQUAL'
+                print('fa=fb EQUAL')
                 p_MH, k_MH = MexicanHat.power_spectrum(residual_a, mask=mask, phys_width=width)
             else:   
-                print 'fa != fb cross spectra'
+                print('fa != fb cross spectra')
                 residual_b = h5File['s%03d' % snap]['residual_%s' % fb].value
                 p_MH, k_MH = MexicanHat.power_spectrum(residual_a, residual_b, mask=mask, phys_width=width)  
             
@@ -66,9 +76,9 @@ def compute_power_spectra(h5File, MexicanHat, mask_names, snapshots, akpc, width
 def compute_C_and_R(MexicanHat, snapshots, spectra_data, cross_pairs):
     for snap in snapshots:
         for pair in cross_pairs:
-            print 's%d %s'%(snap, pair)
+            print('s%d %s'%(snap, pair))
             a,b = pair[0],pair[1]
-            print (a,b)
+            print(a,b)
             power_a  = spectra_data[snap]['%s%s'%(a,a)]['power_spec']
             power_b  = spectra_data[snap]['%s%s'%(b,b)]['power_spec']
             power_ab = spectra_data[snap]['%s%s'%(a,b)]['power_spec']
@@ -247,10 +257,10 @@ def add_CR_bands_to_CR_map(map_data, snapshots, stats, scales, cross_pairs):
 projection = False
 padded = False
 
-#datadir = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program/results_data/pad_testing'
-#plotdir = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program/AGN_FB_plots/corey_MH_results/pad_testing'
-datadir = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program/results_data/all_samples'
-plotdir = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program/AGN_FB_plots/corey_MH_results/all_samples'
+#datadir = kav + '/results_data/pad_testing'
+#plotdir = kav + '/AGN_FB_plots/corey_MH_results/pad_testing'
+datadir = kav + '/results_data/all_samples'
+plotdir = kav + '/AGN_FB_plots/corey_MH_results/all_samples'
 
 #snapshots = [114]
 snapshots = [150, 137, 114, 103, 82, 59, 147]
@@ -295,7 +305,7 @@ if padded:
     h5file = h5py.File('%s/padded_residuals_%s.h5' % (datadir, dim_str), 'r')
 else:
     h5file = h5py.File('%s/not_padded_residuals_%s.h5' % (datadir, dim_str), 'r')
-#h5file = h5py.File('/Users/coreybrummel-smith/GT/Kavli_Summer_Program/code/all_data_s114_new2.h5', 'r')
+#h5file = h5py.File('/Users/Takeo/Kavli_Summer_Program/code/all_data_s114_new2.h5', 'r')
 kpc_per_arcmin = h5file.attrs['kpc_per_arcmin'] 
 width_arcmin   = h5file.attrs['width_arcmin']
 #if not projection:
@@ -361,7 +371,7 @@ for snap in snapshots:
 
 
     for pair in cross_pairs:
-        print "pair", pair
+        print("pair", pair)
         # C and R map overlap figure
         fig, axes = plt.subplots(2,2, figsize=(8,8))
         fig.subplots_adjust(hspace=0.05, wspace=0.05, right=0.88)    
@@ -398,7 +408,7 @@ for snap in snapshots:
                 std = stat[3]
                 vmin = avg-std
                 vmax = avg+std  
-                print snap, letter, avg               
+                print(snap, letter, avg)
                 
                 # Create an alpha channel based measured C or R values
                 mask = cr_map_data[letter][snap][pair][scale]['err_mask']
@@ -453,12 +463,10 @@ for snap in snapshots:
         if mask_names is not None:
             for name in mask_names:
                 mask_str += '_' + name
-
-        fig1.savefig("%s/nearest_s114_MH_%03d_%s_power_spectra_%s%s"% (plotdir, snap, pair, dim_str, mask_str))
-        fig2.savefig("%s/nearest_s114_MH_%03d_%s_CR_%s%s"           % (plotdir, snap, pair, dim_str, mask_str))
-        fig.savefig( "%s/nearest_s114_MH_%03d_%s_CR_map_%s%s"       % (plotdir, snap, pair, dim_str, mask_str))        
-        
-        print spectra_data
+        fig1.savefig("%s/nearest_MH_%03d_%s_power_spectra_%s%s"% (plotdir, snap, pair, dim_str, mask_str))
+        fig2.savefig("%s/nearest_MH_%03d_%s_CR_%s%s"           % (plotdir, snap, pair, dim_str, mask_str))
+        fig.savefig( "%s/nearest_MH_%03d_%s_CR_map_%s%s"       % (plotdir, snap, pair, dim_str, mask_str))        
+    
     ## END for pair in cross_pairs
 
 
