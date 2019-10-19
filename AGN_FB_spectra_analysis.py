@@ -23,22 +23,29 @@ scale_plot_size(2.5)
 def nearest_index(data, target):
     return np.argmin(np.abs(data-target))
 
-def compute_power_spectra(h5File, MexicanHat, mask_name, snapshots, akpc, width_arcmin, field_pairs, field2letter, ndims):
+def compute_power_spectra(h5File, MexicanHat, mask_names, snapshots, akpc, width_arcmin, field_pairs, field2letter, ndims):
     spectra_data = {}
 
     width = width_arcmin * akpc
 
     for snap in snapshots:
-        if mask_name is not None:
-            mask = h5File['s%03d' % snap]['masks'][mask_name].value
+        nside = h5File['s%03d' % snap].attrs['nside']
+        mask = np.ones(nside)
+        if mask_names is not None:
+            for name in mask_names:
+                single_mask = h5File['s%03d' % snap]['masks'][name].value
+                mask = np.logical_and(mask, single_mask)
+
         else:
             mask = None
+
         spectra_data[snap] = {}
         for fa, fb in field_pairs:
             print 'fa, fb', fa, fb
             pair = '%s%s' %(field2letter[fa], field2letter[fb])      
             spectra_data[snap][pair] = {}
             residual_a = h5File['s%03d' % snap]['residual_%s' % fa].value
+
             if fa == fb:
                 print 'fa=fb EQUAL'
                 p_MH, k_MH = MexicanHat.power_spectrum(residual_a, mask=mask, phys_width=width)
@@ -238,10 +245,15 @@ def add_CR_bands_to_CR_map(map_data, snapshots, stats, scales, cross_pairs):
 
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 projection = False
+padded = False
 
-plotdir = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program/AGN_FB_plots/corey_MH_results/test'
-datadir = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program/results_data'
-snapshots = [114]
+#datadir = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program/results_data/pad_testing'
+#plotdir = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program/AGN_FB_plots/corey_MH_results/pad_testing'
+datadir = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program/results_data/all_samples'
+plotdir = '/Users/coreybrummel-smith/GT/Kavli_Summer_Program/AGN_FB_plots/corey_MH_results/all_samples'
+
+#snapshots = [114]
+snapshots = [150, 137, 114, 103, 82, 59, 147]
 
 cr_map_resolution = 800
 map_letters = ['R','C']
@@ -279,22 +291,31 @@ else:
     #field_pairs_short = ['HH', 'SS', 'HS']
     #cross_pairs = ['HS']
 
-#h5file = h5py.File('%s/residuals_%s.h5' % (datadir, dim_str), 'r')
-h5file = h5py.File('/Users/coreybrummel-smith/GT/Kavli_Summer_Program/code/all_data_s114_new2.h5', 'r')
+if padded:
+    h5file = h5py.File('%s/padded_residuals_%s.h5' % (datadir, dim_str), 'r')
+else:
+    h5file = h5py.File('%s/not_padded_residuals_%s.h5' % (datadir, dim_str), 'r')
+#h5file = h5py.File('/Users/coreybrummel-smith/GT/Kavli_Summer_Program/code/all_data_s114_new2.h5', 'r')
 kpc_per_arcmin = h5file.attrs['kpc_per_arcmin'] 
 width_arcmin   = h5file.attrs['width_arcmin']
 #if not projection:
 #    gridLevel = h5file.attrs['gridLevel'] 
 
 kpts=25
-#conv_method = 'nearest'
-conv_method = 'constant'
-mask_name = None
-#mask_name = 'no_large_density_fluctuation'
-#mask_name = 'no_cold_gas'
+conv_method = 'nearest'
+#conv_method = 'constant'
+#mask_names = None
+#mask_names = ['no_cold_gas']
+#mask_names = ['no_large_density_fluctuation']
+#mask_names = ['no_large_density_fluctuation', 'no_cold_gas']
+mask_names = ['no_cold_gas', 'sphere']
+
+if padded:
+    mask_names.append('pad')
+
 MH = mh.MexicanHat(Nk=kpts, mode=conv_method)
 
-spectra_data = compute_power_spectra(h5file, MH, mask_name, snapshots, 
+spectra_data = compute_power_spectra(h5file, MH, mask_names, snapshots, 
     kpc_per_arcmin, width_arcmin, field_pairs, field2letter, ndims)
 h5file.close()
 spectra_data = compute_C_and_R(MH, snapshots, spectra_data, cross_pairs)
@@ -428,11 +449,16 @@ for snap in snapshots:
         ax2.set_ylabel(r"$R$")
         ax2.legend(loc=8, ncol=1, bbox_to_anchor=(1.08,-0.03), fontsize=9, handlelength=1)
     
-        mask_str = '_'+mask_name if mask_name is not None else ''
-        fig1.savefig("%s/COMPARE_IRINA_pad0s_s114_MH_%03d_%s_power_spectra_%s%s"% (plotdir, snap, pair, dim_str, mask_str))
-        fig2.savefig("%s/COMPARE_IRINA_pad0s_s114_MH_%03d_%s_CR_%s%s"           % (plotdir, snap, pair, dim_str, mask_str))
-        fig.savefig( "%s/COMPARE_IRINA_pad0s_s114_MH_%03d_%s_CR_map_%s%s"       % (plotdir, snap, pair, dim_str, mask_str))        
+        mask_str = ''
+        if mask_names is not None:
+            for name in mask_names:
+                mask_str += '_' + name
+
+        fig1.savefig("%s/nearest_s114_MH_%03d_%s_power_spectra_%s%s"% (plotdir, snap, pair, dim_str, mask_str))
+        fig2.savefig("%s/nearest_s114_MH_%03d_%s_CR_%s%s"           % (plotdir, snap, pair, dim_str, mask_str))
+        fig.savefig( "%s/nearest_s114_MH_%03d_%s_CR_map_%s%s"       % (plotdir, snap, pair, dim_str, mask_str))        
         
+        print spectra_data
     ## END for pair in cross_pairs
 
 
@@ -440,8 +466,8 @@ for snap in snapshots:
 
 ### END for snap in snapshots
 
-#spectra_fn = '%s/spectra_%s%s.h5' % (datadir, dim_str, mask_str)
-#D2H5.save_dict_to_hdf5(spectra_data, spectra_fn)
+spectra_fn = '%s/spectra_%s%s.h5' % (datadir, dim_str, mask_str)
+D2H5.save_dict_to_hdf5(spectra_data, spectra_fn)
 #f = open(spectrafn, 'w')
 #json.dump(spectra_data, f)
 #f.close()
