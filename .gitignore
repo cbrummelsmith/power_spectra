@@ -1,4 +1,5 @@
 # These files and folder will be ignored by the git repo.
+untitled.py
 
 # files with extension
 *.pyc

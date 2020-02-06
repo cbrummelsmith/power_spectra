@@ -156,7 +156,7 @@ class MexicanHat:
             a) filtered_data : An array of arrays where each element is the
                filtered data at length scale 1/k. filtered_data.shape = (Nk, data.shape)
             b) k: wavenumbers
-        """        
+        """       
         if data_b is not None:
             if data_a.shape != data_b.shape:
                 print('data_a.shape = (%d,%d,%d) must equal\n\
